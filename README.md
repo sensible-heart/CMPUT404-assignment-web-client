@@ -19,3 +19,6 @@ examples thus some of the code is Copyright © 2001-2013 Python
 Software Foundation; All Rights Reserved under the PSF license (GPL
 compatible) http://docs.python.org/2/library/socketserver.html
 
+References
+==========
+Josh M. - http://stackoverflow.com/questions/5979342/regex-to-capture-everything-before-first-optional-string

@@ -32,6 +32,21 @@ class HTTPResponse(object):
         self.code = code
         self.body = body
 
+class HTTPRequest(object):
+    def __init__(self, method, path, protocol, hostname, body = ""):
+        self.method = method
+        self.path = path
+        self.protocol = protocol
+        self.hostname = hostname
+        self.body = body
+    
+    def build(self):
+        if self.hostname == None:
+            self.hostname = ""
+        else:
+            self.hostname = "\nHost: " + self.hostname
+        return self.method+" "+self.path+" "+self.protocol+"\r\n" + self.body
+
 class HTTPClient(object):
     #def get_host_port(self,url):
 
@@ -73,24 +88,30 @@ class HTTPClient(object):
             else:
                 done = not part
         return str(buffer)
-
-    def get_host_and_port(self, url):
-        reg_ex_format = "(.*?)(?::|$)(\d{1,5})?"
+    
+    def sendall(self, socket, request):
+        socket.sendall(request.build())
+    
+    def parse_url(self, url):
+        reg_ex_format = "((?i)http://)?(.*?)(?::|$)(\d{1,5})?(.*)"
         match = re.search(reg_ex_format, url)
-        host, port = match.group(1), match.group(2)
+        host, port, path = match.group(2), match.group(3), match.group(4)
         if port != None:
             port = int(port)
+            if port >= 65535:
+                host, port = None, None
         if port == None and host != None:
             port = 80
-        return host, port
+        if path == None:
+            path = "/"
+        return host, port, path
 
     def GET(self, url, args=None):
-        host, port = self.get_host_and_port(url)
-        print "host: ", host
-        print "port: ", port
+        host, port, path = self.parse_url(url)
+        # Check host and port for None
         connection_socket = self.connect(host, port)
+        self.sendall(connection_socket, HTTPRequest("GET", path, " HTTP/1.*", host))
         data = self.recvall(connection_socket)
-        print "data: ", data
         code = self.get_code(data)
         body = ""
         return HTTPResponse(code, body)

@@ -37,9 +37,22 @@ class HTTPClient(object):
 
     def connect(self, host, port):
         # use sockets!
-        return None
+        outgoing = socket.socket()
+        try:
+            outgoing.connect((host,port))
+        except socket.error:
+            # If no address associated with hostname
+            if exception.errno == -5:
+                outgoing = None
+            else:
+                raise
+        return outgoing
 
     def get_code(self, data):
+        reg_ex_format = "(HTTP/1.[0,1]) ([1-5][0-9][0-9]) (.*)\n"
+        match = re.search(reg_ex_format, data)
+        if len(match.groups()) != 3:
+            return 400
         return None
 
     def get_headers(self,data):

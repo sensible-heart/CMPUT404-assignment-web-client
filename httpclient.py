@@ -40,9 +40,9 @@ class HTTPClient(object):
         outgoing = socket.socket()
         try:
             outgoing.connect((host,port))
-        except socket.error:
+        except socket.error, ex:
             # If no address associated with hostname
-            if exception.errno == -5:
+            if ex.errno == -5:
                 outgoing = None
             else:
                 raise
@@ -51,9 +51,10 @@ class HTTPClient(object):
     def get_code(self, data):
         reg_ex_format = "(HTTP/1.[0,1]) ([1-5][0-9][0-9]) (.*)\n"
         match = re.search(reg_ex_format, data)
+        code = 0
         if len(match.groups()) != 3:
-            return 400
-        return None
+            code = 400        
+        return match.group(2)
 
     def get_headers(self,data):
         return None
@@ -73,8 +74,24 @@ class HTTPClient(object):
                 done = not part
         return str(buffer)
 
+    def get_host_and_port(self, url):
+        reg_ex_format = "(.*?)(?::|$)(\d{1,5})?"
+        match = re.search(reg_ex_format, url)
+        host, port = match.group(1), match.group(2)
+        if port != None:
+            port = int(port)
+        if port == None and host != None:
+            port = 80
+        return host, port
+
     def GET(self, url, args=None):
-        code = 500
+        host, port = self.get_host_and_port(url)
+        print "host: ", host
+        print "port: ", port
+        connection_socket = self.connect(host, port)
+        data = self.recvall(connection_socket)
+        print "data: ", data
+        code = self.get_code(data)
         body = ""
         return HTTPResponse(code, body)
 

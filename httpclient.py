@@ -54,22 +54,14 @@ class HTTPClient(object):
     def connect(self, host, port):
         # use sockets!
         outgoing = socket.socket()
-        #print "host: ", host
-        #print "port: ", port
         try:
             outgoing.connect((host,port))
             outgoing.setblocking(0)
         except socket.error, ex:
-            # If no address associated with hostname
             if ex.errno == -5 or ex.errno == 111:
-             #   print "connection error"
                 outgoing = None
             else:
                 raise
-        #if (outgoing is None):
-            #print "outgoing is None"
-        #else:
-            #print "outgoing is: ", outgoing
         return outgoing
 
     def get_code(self, data):
@@ -92,7 +84,6 @@ class HTTPClient(object):
     def recvall(self, sock):
         buffer = bytearray()
         done = False
-        #print "recvall start"
         while not done:
             try:
                 part = sock.recv(1024)
@@ -103,11 +94,9 @@ class HTTPClient(object):
                 buffer.extend(part)
             else:
                 done = not part
-        #print "finished recvall"
         return str(buffer)
 
     def sendall(self, socket, request):
-        #print "request: ", request.build()
         socket.sendall(request.build())
 
     def prepend_http(self, url):
@@ -143,11 +132,8 @@ class HTTPClient(object):
         data = self.recvall(connection_socket)
         if (data == None):
             return HTTPResponse(404)
-        #print "data: ", data
         code = self.get_code(data)
         body = self.get_body(data)
-        #print "code: ", code
-        #print "body: ", body
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):

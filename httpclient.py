@@ -23,6 +23,7 @@ import socket
 import re
 # you may use urllib to encode data appropriately
 import urllib
+from urlparse import urlparse
 
 def help():
     print "httpclient.py [GET/POST] [URL]\n"
@@ -45,7 +46,7 @@ class HTTPRequest(object):
             self.hostname = ""
         else:
             self.hostname = "\nHost: " + self.hostname
-        return self.method+" "+self.path+" "+self.protocol+"\r\n" + self.body
+        return self.method+" "+self.path+" "+self.protocol+self.hostname+"\r\n\r\n" + self.body
 
 class HTTPClient(object):
     #def get_host_port(self,url):
@@ -53,20 +54,22 @@ class HTTPClient(object):
     def connect(self, host, port):
         # use sockets!
         outgoing = socket.socket()
-        print "host: ", host
-        print "port: ", port
+        #print "host: ", host
+        #print "port: ", port
         try:
             outgoing.connect((host,port))
+            outgoing.setblocking(0)
         except socket.error, ex:
             # If no address associated with hostname
             if ex.errno == -5 or ex.errno == 111:
+             #   print "connection error"
                 outgoing = None
             else:
                 raise
-        if (outgoing is None):
-            print "outgoing is None"
-        else:
-            print "outgoing is: ", outgoing
+        #if (outgoing is None):
+            #print "outgoing is None"
+        #else:
+            #print "outgoing is: ", outgoing
         return outgoing
 
     def get_code(self, data):
@@ -74,40 +77,52 @@ class HTTPClient(object):
         match = re.search(reg_ex_format, data)
         code = 0
         if match == None or len(match.groups()) != 3:
-            code = 400
+            code = 404
         else:
-            code = match.group(2)
+            code = int(match.group(2))
         return code
 
     def get_headers(self,data):
         return None
 
     def get_body(self, data):
-        return None
+        return data.split("\r\n\r\n", 1)[1]
 
     # read everything from the socket
     def recvall(self, sock):
         buffer = bytearray()
         done = False
+        #print "recvall start"
         while not done:
-            part = sock.recv(1024)
+            try:
+                part = sock.recv(1024)
+            except socket.error, ex:
+                if ex.errno == 11:
+                    continue
             if (part):
                 buffer.extend(part)
             else:
                 done = not part
-        print "finished recvall"
+        #print "finished recvall"
         return str(buffer)
 
     def sendall(self, socket, request):
+        #print "request: ", request.build()
         socket.sendall(request.build())
 
+    def prepend_http(self, url):
+        if not url.startswith("http://"):
+            url = "http://" + url
+        return url
+
     def parse_url(self, url):
-        reg_ex_format = "((?i)http://)?(.*?)(?::|$)(\d{1,5})?(.*)"
-        match = re.search(reg_ex_format, url)
-        if (match != None):
-            host, port, path = match.group(2).strip("/"), match.group(3), match.group(4)
-        else:
-            host, port, path = None, None, None
+        url =  self.prepend_http(url)
+        parsed_url = urlparse(url)
+        host = parsed_url.hostname
+        port = parsed_url.port
+        path = parsed_url.path
+        if(host == None):
+            host = port = path = None
         if port != None:
             port = int(port)
             if port >= 65535:
@@ -126,11 +141,13 @@ class HTTPClient(object):
             return HTTPResponse(404)
         self.sendall(connection_socket, HTTPRequest("GET", path, " HTTP/1.1", host))
         data = self.recvall(connection_socket)
-        print "data: ", data
+        if (data == None):
+            return HTTPResponse(404)
+        #print "data: ", data
         code = self.get_code(data)
-        body = ""
-        print "code: ", code
-        print "body: ", body
+        body = self.get_body(data)
+        #print "code: ", code
+        #print "body: ", body
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):

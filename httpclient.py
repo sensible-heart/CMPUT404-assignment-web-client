@@ -34,19 +34,21 @@ class HTTPResponse(object):
         self.body = body
 
 class HTTPRequest(object):
-    def __init__(self, method, path, protocol, hostname, body = ""):
+    def __init__(self, method, path, headers, body = ""):
         self.method = method
         self.path = path
-        self.protocol = protocol
-        self.hostname = hostname
+        self.protocol = "HTTP/1.1"
         self.body = body
+        self.hostname = "\nHost: " + headers[0]
+        if len(headers)>1:
+            self.content_type = "\nContent-type: "+ headers[1]
+            self.content_length = "\nContent-length: " + str(headers[2])
+        else:
+            self.content_type = ""
+            self.content_length =""
 
     def build(self):
-        if self.hostname == None:
-            self.hostname = ""
-        else:
-            self.hostname = "\nHost: " + self.hostname
-        return self.method+" "+self.path+" "+self.protocol+self.hostname+"\r\n\r\n" + self.body
+        return self.method+" "+self.path+" "+self.protocol+self.hostname+self.content_type+self.content_length+"\r\n\r\n" + self.body
 
 class HTTPClient(object):
     #def get_host_port(self,url):
@@ -122,13 +124,24 @@ class HTTPClient(object):
             path = "/"
         return host, port, path
 
+    def build_post(self, host, args):
+        content_type = "application/x-www-form-encoded"
+        body = ""
+        content_length = 0
+        if (args != None):
+            for key, value in args.iteritems():
+                body += key + "=" + value + "&"
+            content_length = len(body)
+        headers = [host, content_type, content_length]
+        return (headers, body.strip('&'))
+
     def GET(self, url, args=None):
         host, port, path = self.parse_url(url)
         # Check host and port for None
         connection_socket = self.connect(host, port)
         if connection_socket == None:
             return HTTPResponse(404)
-        self.sendall(connection_socket, HTTPRequest("GET", path, " HTTP/1.1", host))
+        self.sendall(connection_socket, HTTPRequest("GET", path, [host]))
         data = self.recvall(connection_socket)
         if (data == None):
             return HTTPResponse(404)
@@ -137,8 +150,18 @@ class HTTPClient(object):
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
-        code = 500
-        body = ""
+        host, port, path = self.parse_url(url)
+        # Check host and port for None
+        connection_socket = self.connect(host, port)
+        if connection_socket == None:
+            return HTTPResponse(404)
+        headers, body = self.build_post(host, args)
+        self.sendall(connection_socket, HTTPRequest("POST", path, headers, body))
+        data = self.recvall(connection_socket)
+        if (data == None):
+            return HTTPResponse(404)
+        code = self.get_code(data)
+        body = self.get_body(data)
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):

@@ -39,7 +39,7 @@ class HTTPRequest(object):
         self.protocol = protocol
         self.hostname = hostname
         self.body = body
-    
+
     def build(self):
         if self.hostname == None:
             self.hostname = ""
@@ -53,23 +53,31 @@ class HTTPClient(object):
     def connect(self, host, port):
         # use sockets!
         outgoing = socket.socket()
+        print "host: ", host
+        print "port: ", port
         try:
             outgoing.connect((host,port))
         except socket.error, ex:
             # If no address associated with hostname
-            if ex.errno == -5:
+            if ex.errno == -5 or ex.errno == 111:
                 outgoing = None
             else:
                 raise
+        if (outgoing is None):
+            print "outgoing is None"
+        else:
+            print "outgoing is: ", outgoing
         return outgoing
 
     def get_code(self, data):
         reg_ex_format = "(HTTP/1.[0,1]) ([1-5][0-9][0-9]) (.*)\n"
         match = re.search(reg_ex_format, data)
         code = 0
-        if len(match.groups()) != 3:
-            code = 400        
-        return match.group(2)
+        if match == None or len(match.groups()) != 3:
+            code = 400
+        else:
+            code = match.group(2)
+        return code
 
     def get_headers(self,data):
         return None
@@ -87,22 +95,26 @@ class HTTPClient(object):
                 buffer.extend(part)
             else:
                 done = not part
+        print "finished recvall"
         return str(buffer)
-    
+
     def sendall(self, socket, request):
         socket.sendall(request.build())
-    
+
     def parse_url(self, url):
         reg_ex_format = "((?i)http://)?(.*?)(?::|$)(\d{1,5})?(.*)"
         match = re.search(reg_ex_format, url)
-        host, port, path = match.group(2), match.group(3), match.group(4)
+        if (match != None):
+            host, port, path = match.group(2).strip("/"), match.group(3), match.group(4)
+        else:
+            host, port, path = None, None, None
         if port != None:
             port = int(port)
             if port >= 65535:
                 host, port = None, None
         if port == None and host != None:
             port = 80
-        if path == None:
+        if path == None or path == "":
             path = "/"
         return host, port, path
 
@@ -110,10 +122,15 @@ class HTTPClient(object):
         host, port, path = self.parse_url(url)
         # Check host and port for None
         connection_socket = self.connect(host, port)
-        self.sendall(connection_socket, HTTPRequest("GET", path, " HTTP/1.*", host))
+        if connection_socket == None:
+            return HTTPResponse(404)
+        self.sendall(connection_socket, HTTPRequest("GET", path, " HTTP/1.1", host))
         data = self.recvall(connection_socket)
+        print "data: ", data
         code = self.get_code(data)
         body = ""
+        print "code: ", code
+        print "body: ", body
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
@@ -126,7 +143,7 @@ class HTTPClient(object):
             return self.POST( url, args )
         else:
             return self.GET( url, args )
-    
+
 if __name__ == "__main__":
     client = HTTPClient()
     command = "GET"
@@ -136,4 +153,4 @@ if __name__ == "__main__":
     elif (len(sys.argv) == 3):
         print client.command( sys.argv[2], sys.argv[1] )
     else:
-        print client.command( sys.argv[1] )   
+        print client.command( sys.argv[1] )

@@ -22,6 +22,6 @@ compatible) http://docs.python.org/2/library/socketserver.html
 
 References
 ==========
-Josh M. - http://stackoverflow.com/questions/5979342/regex-to-capture-everything-before-first-optional-string
-Burak Guzel - https://code.tutsplus.com/tutorials/http-headers-for-dummies--net-8039
-Fielding, et al. - https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html
+* Josh M. - http://stackoverflow.com/questions/5979342/regex-to-capture-everything-before-first-optional-string
+* Burak Guzel - https://code.tutsplus.com/tutorials/http-headers-for-dummies--net-8039
+* Fielding, et al. - https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html

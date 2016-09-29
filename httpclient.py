@@ -21,6 +21,7 @@
 import sys
 import socket
 import re
+import string
 # you may use urllib to encode data appropriately
 import urllib
 from urlparse import urlparse
@@ -40,15 +41,15 @@ class HTTPRequest(object):
         self.protocol = "HTTP/1.1"
         self.body = body
         self.hostname = "\nHost: " + headers[0]
-        if len(headers)>1:
-            self.content_type = "\nContent-type: "+ headers[1]
+        self.accept = "\nAccept: application/json, text/html"
+        self.content_type = ""
+        self.content_length =""
+        if method == 'POST':
+            self.content_type = "\nContent-type: " + headers[1]
             self.content_length = "\nContent-length: " + str(headers[2])
-        else:
-            self.content_type = ""
-            self.content_length =""
 
     def build(self):
-        return self.method+" "+self.path+" "+self.protocol+self.hostname+self.content_type+self.content_length+"\r\n\r\n" + self.body
+        return self.method+" "+self.path+" "+self.protocol+self.hostname+self.accept+self.content_type+self.content_length+"\r\n\r\n" + self.body
 
 class HTTPClient(object):
     #def get_host_port(self,url):
@@ -99,6 +100,7 @@ class HTTPClient(object):
         return str(buffer)
 
     def sendall(self, socket, request):
+        print "request: ", request.build()
         socket.sendall(request.build())
 
     def prepend_http(self, url):
@@ -124,13 +126,24 @@ class HTTPClient(object):
             path = "/"
         return host, port, path
 
+    def get_safe_string(self, unsafe_string):
+        safe_string = ''
+        for letter in unsafe_string:
+            if letter in string.whitespace:
+                safe_string += '%'+hex(ord(letter))[2:]
+            else:
+                safe_string += letter    
+        return safe_string
+
     def build_post(self, host, args):
-        content_type = "application/x-www-form-encoded"
+        content_type = "application/x-www-form-urlencoded"
         body = ""
         content_length = 0
         if (args != None):
             for key, value in args.iteritems():
-                body += key + "=" + value + "&"
+                safe_key = self.get_safe_string(key)
+                safe_value = self.get_safe_string(value)
+                body += safe_key +'%'+hex(ord("="))[2:] + safe_value +'%'+hex(ord("&"))[2:]
             content_length = len(body)
         headers = [host, content_type, content_length]
         return (headers, body.strip('&'))
@@ -156,7 +169,8 @@ class HTTPClient(object):
         if connection_socket == None:
             return HTTPResponse(404)
         headers, body = self.build_post(host, args)
-        self.sendall(connection_socket, HTTPRequest("POST", path, headers, body))
+        request =  HTTPRequest("POST", path, headers, body)
+        self.sendall(connection_socket, request)
         data = self.recvall(connection_socket)
         if (data == None):
             return HTTPResponse(404)

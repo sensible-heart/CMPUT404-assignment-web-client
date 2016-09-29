@@ -125,7 +125,9 @@ class HTTPClient(object):
             path = "/"
         return host, port, path
 
-    def build_post(self, host, args):
+    def build_header_and_body(self, host, args, method):
+        if method == 'GET':
+            return ([host], "")
         content_type = "application/x-www-form-urlencoded"
         body = ""
         content_length = 0
@@ -136,28 +138,20 @@ class HTTPClient(object):
         return (headers, body.strip('&'))
 
     def GET(self, url, args=None):
-        host, port, path = self.parse_url(url)
-        # Check host and port for None
-        connection_socket = self.connect(host, port)
-        if connection_socket == None:
-            print 'Could not resolve host: ', url
-            return HTTPResponse(400)
-        self.sendall(connection_socket, HTTPRequest("GET", path, [host]))
-        data = self.recvall(connection_socket)
-        if (data == None):
-            return HTTPResponse(404)
-        print data
-        return HTTPResponse(self.get_code(data), self.get_body(data))
+        return self.perform_http_operation(url, args, "GET")
 
     def POST(self, url, args=None):
+        return self.perform_http_operation(url, args, "POST")
+
+    def perform_http_operation(self, url, args, method):
         host, port, path = self.parse_url(url)
         # Check host and port for None
         connection_socket = self.connect(host, port)
         if connection_socket == None:
             print 'Could not resolve host: ', url
             return HTTPResponse(400)
-        headers, body = self.build_post(host, args)
-        request =  HTTPRequest("POST", path, headers, body)
+        headers, body = self.build_header_and_body(host, args, method)
+        request =  HTTPRequest(method, path, headers, body)
         self.sendall(connection_socket, request)
         data = self.recvall(connection_socket)
         if (data == None):

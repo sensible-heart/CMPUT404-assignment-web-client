@@ -126,24 +126,12 @@ class HTTPClient(object):
             path = "/"
         return host, port, path
 
-    def get_safe_string(self, unsafe_string):
-        safe_string = ''
-        for letter in unsafe_string:
-            if letter in string.whitespace:
-                safe_string += '%'+hex(ord(letter))[2:]
-            else:
-                safe_string += letter    
-        return safe_string
-
     def build_post(self, host, args):
         content_type = "application/x-www-form-urlencoded"
         body = ""
         content_length = 0
         if (args != None):
-            for key, value in args.iteritems():
-                safe_key = self.get_safe_string(key)
-                safe_value = self.get_safe_string(value)
-                body += safe_key +'%'+hex(ord("="))[2:] + safe_value +'%'+hex(ord("&"))[2:]
+            body = urllib.urlencode(args, True)
             content_length = len(body)
         headers = [host, content_type, content_length]
         return (headers, body.strip('&'))

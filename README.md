@@ -11,6 +11,7 @@ Contributors / Licensing
 ========================
 *Alex Makepeace
 *Wyatt Fleming
+
 Generally everything is LICENSE'D under the Apache 2 license by Abram Hindle, 
 https://github.com/tywtyw2002, and https://github.com/treedust
 
@@ -22,3 +23,5 @@ compatible) http://docs.python.org/2/library/socketserver.html
 References
 ==========
 Josh M. - http://stackoverflow.com/questions/5979342/regex-to-capture-everything-before-first-optional-string
+Burak Guzel - https://code.tutsplus.com/tutorials/http-headers-for-dummies--net-8039
+Fielding, et al. - https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html

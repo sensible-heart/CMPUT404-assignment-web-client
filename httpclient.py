@@ -41,7 +41,7 @@ class HTTPRequest(object):
         self.protocol = "HTTP/1.1"
         self.body = body
         self.hostname = "\nHost: " + headers[0]
-        self.accept = "\nAccept: application/json, text/html"
+        self.accept = "\nAccept: application/json, text/html, text/plain"
         self.content_type = ""
         self.content_length =""
         if method == 'POST':
@@ -100,11 +100,10 @@ class HTTPClient(object):
         return str(buffer)
 
     def sendall(self, socket, request):
-        print "request: ", request.build()
         socket.sendall(request.build())
 
     def prepend_http(self, url):
-        if not url.startswith("http://"):
+        if not (url.startswith("http://") or url.startswith('https://')):
             url = "http://" + url
         return url
 
@@ -141,30 +140,30 @@ class HTTPClient(object):
         # Check host and port for None
         connection_socket = self.connect(host, port)
         if connection_socket == None:
-            return HTTPResponse(404)
+            print 'Could not resolve host: ', url
+            return HTTPResponse(400)
         self.sendall(connection_socket, HTTPRequest("GET", path, [host]))
         data = self.recvall(connection_socket)
         if (data == None):
             return HTTPResponse(404)
-        code = self.get_code(data)
-        body = self.get_body(data)
-        return HTTPResponse(code, body)
+        print data
+        return HTTPResponse(self.get_code(data), self.get_body(data))
 
     def POST(self, url, args=None):
         host, port, path = self.parse_url(url)
         # Check host and port for None
         connection_socket = self.connect(host, port)
         if connection_socket == None:
-            return HTTPResponse(404)
+            print 'Could not resolve host: ', url
+            return HTTPResponse(400)
         headers, body = self.build_post(host, args)
         request =  HTTPRequest("POST", path, headers, body)
         self.sendall(connection_socket, request)
         data = self.recvall(connection_socket)
         if (data == None):
             return HTTPResponse(404)
-        code = self.get_code(data)
-        body = self.get_body(data)
-        return HTTPResponse(code, body)
+        print data
+        return HTTPResponse(self.get_code(data), self.get_body(data))
 
     def command(self, url, command="GET", args=None):
         if (command == "POST"):
